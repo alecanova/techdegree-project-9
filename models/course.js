@@ -1,18 +1,9 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
-  class Course extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
-    static associate(models) {
-      // define association here
-    }
-  };
+  
+  class Course extends Model {};
   Course.init({
     id: {
       type: DataTypes.INTEGER,
@@ -27,5 +18,17 @@ module.exports = (sequelize, DataTypes) => {
     sequelize,
     modelName: 'Course',
   });
+
+  Course.associate = (models) => {
+    Course.belongsTo(models.User, {
+      as: 'owner', //alias
+      foreignKey: {
+        fieldName: 'userId',
+        allowNull: false,
+      },
+    });
+  };
+
   return Course;
+
 };
