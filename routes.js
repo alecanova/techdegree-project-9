@@ -1,15 +1,16 @@
 'use strict';
 
 const express = require('express');
-// const { asyncHandler } = require('./middleware/async-handler');
-//const { authenticateUser } = require('./middleware/auth-user');
+const bcryptjs = require('bcryptjs');
+const { authenticateUser } = require('./middleware/auth-user');
 const { User, Course } = require('./models');
+
 
 // Construct a router instance
 const router = express.Router();
 
 // GET /api/users 200 - Returns the currently authenticated user.
-router.get('/users', async(req, res) => {
+router.get('/users', authenticateUser, async(req, res) => {
 
     try {
         const users = await User.findAll();
@@ -21,18 +22,22 @@ router.get('/users', async(req, res) => {
 });
 
 // POST /api/users 201 - Creates a user, sets the Location header to "/", and returns no content.
-router.post('/users', async (req, res) => {
+router.post('/users', async(req, res) => {
+
+    let user = req.body;
 
     try {
-        await User.create(req.body);
-        res.status(201).json({ "message": "Account succesfully created!"});
+        if (user.password) user.password = bcryptjs.hashSync(user.password);
+        user = await User.create(req.body);
+        res.location('/');
+        res.status(201).json({ "message": "User successfully created!"});
     } catch(error) {
         if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
             const errors = error.errors.map(err => err.message);
             res.status(400).json({ errors });   
-            } else {
+        } else {
             throw error;
-            }
+        }
     }
 
 });
@@ -54,8 +59,8 @@ router.get('/courses', async(req, res) => {
 
 });
 
-// GET /api/courses/:id 200 - Returns the course (including the user that owns the course) for the provided course ID. OKKKKKKKKK
-router.get('/courses/:id', async(req, res) => {
+// GET /api/courses/:id 200 - Returns the course (including the user that owns the course) for the provided course ID.
+router.get('/courses/:id', authenticateUser, async(req, res) => {
 
     try{
         const { id } = req.params;
@@ -82,16 +87,22 @@ router.get('/courses/:id', async(req, res) => {
 router.post('/courses', async (req, res) => {
 
     try {
-        await Course.create(req.body);
+        const course = await Course.create(req.body);
+        res.location('/api/courses/' + course.id)
         res.status(201).json({ "message": "Course succesfully created!"});
     } catch(error) { 
-        res.status(500).json({ error: error.message });      
+        if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+            const errors = error.errors.map(err => err.message);
+            res.status(400).json({ errors });   
+        } else {
+            next(error);
+        }      
     }
 
 });          
 
 // PUT /api/courses/:id 204 - Updates a course and returns no content.
-router.put('/courses/:id', async(req, res) => {
+router.put('/courses/:id', authenticateUser, async(req, res) => {
 
     try {
         const { id } = req.params;
@@ -101,16 +112,22 @@ router.put('/courses/:id', async(req, res) => {
         if (updated) {
             const updatedCourse = await Course.findOne({ where: { id: id } });
             return res.status(200).json({ course: updatedCourse });
+        } else {
+            throw new Error('Course not found');
         }
-        throw new Error('Course not found');
     } catch(error) {
-        res.status(500).json({ error: error.message });
+        if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+            const errors = error.errors.map(err => err.message);
+            res.status(400).json({ errors });   
+        } else {
+            next(error);
+        }      
     }
 
 });
 
 // DELETE /api/courses/:id 204 - Deletes a course and returns no content.
-router.delete('/courses/:id', async(req, res) => {
+router.delete('/courses/:id', authenticateUser, async(req, res) => {
 
     try {
         const { id } = req.params;
