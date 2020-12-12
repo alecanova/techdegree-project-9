@@ -1,5 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
+const bcrypt = require('bcrypt');
 
 module.exports = (sequelize, DataTypes) => {
 
@@ -16,9 +17,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        notNull: {
-          msg: "A first name is required"
-        },
         notEmpty: {
           msg: "Please provide your first name",
         }, 
@@ -28,9 +26,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        notNull: {
-          msg: "A last name is required"
-        },
         notEmpty: {
           msg: "Please provide your last name",
         }, 
@@ -40,31 +35,27 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       unique: {
+        args: true,
         msg: "The email you entered already exists"
       },
       validate: {
-        notNull: {
+        notEmpty: {
+          args: true,
           msg: "An email is required"
         },
         isEmail: {
+          args: true,
           msg: "Please provide a valid email address"
         }
       }
     },
     password: {
-      type: DataTypes.VIRTUAL,
+      type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        notNull: {
+        notEmpty: {
           msg: "A passsword is required"
         },
-        notEmpty: {
-          msg: "Please provide a password"
-        },
-        len: {
-          args: [8, 16],
-          msg: 'The password should be between 8 and 16 characters in length'
-        }
       }
     },
   }, {
@@ -78,7 +69,6 @@ module.exports = (sequelize, DataTypes) => {
       as: 'owner', //alias
       foreignKey: {
         fieldName: 'userId',
-        allowNull: false,
       },
     });
   };
