@@ -10,11 +10,11 @@ const { User, Course } = require('./models');
 const router = express.Router();
 
 // GET /api/users 200 - Returns the currently authenticated user.
-router.get('/users', authenticateUser, async(req, res) => {
+router.get('/users', authenticateUser, (req, res) => {
 
     try {
-        const users = await User.findAll();
-        res.status(200).json({ users });
+        const { password, ...user } = req.currentUser
+        res.status(200).json(user);
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
@@ -36,7 +36,7 @@ router.post('/users', async(req, res) => {
             const errors = error.errors.map(err => err.message);
             res.status(400).json({ errors });   
         } else {
-            throw error;
+            next(error);
         }
     }
 
@@ -47,6 +47,7 @@ router.get('/courses', async(req, res) => {
 
     try {
         let courses = await Course.findAll({
+            attributes: {exclude: ['createdAt', 'updatedAt']},
             include: [{
                 model: User,
                 as: 'owner',
@@ -60,7 +61,7 @@ router.get('/courses', async(req, res) => {
 });
 
 // GET /api/courses/:id 200 - Returns the course (including the user that owns the course) for the provided course ID.
-router.get('/courses/:id', authenticateUser, async(req, res) => {
+router.get('/courses/:id', async(req, res) => {
 
     try{
         const { id } = req.params;
@@ -84,14 +85,14 @@ router.get('/courses/:id', authenticateUser, async(req, res) => {
 });
 
 // POST /api/courses 201 - Creates a course, sets the Location header to the URI for the course, and returns no content.
-router.post('/courses', async (req, res) => {
+router.post('/courses', authenticateUser, async (req, res) => {
 
     try {
         const course = await Course.create(req.body);
         res.location('/api/courses/' + course.id)
         res.status(201).json({ "message": "Course succesfully created!"});
     } catch(error) { 
-        if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+        if (error.name === 'SequelizeValidationError') {
             const errors = error.errors.map(err => err.message);
             res.status(400).json({ errors });   
         } else {

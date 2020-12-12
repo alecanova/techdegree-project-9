@@ -32,7 +32,7 @@ async function authenticateUser(req, res, next) {
             }
 
         } else {
-            message = `User not found for username: ${credentuals.name}`;
+            message = `User not found for username: ${credentials.name}`;
         }
 
     } else {
