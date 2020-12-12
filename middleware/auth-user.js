@@ -1,43 +1,42 @@
 'use strict';
 
 const auth = require('basic-auth');
-const bcrypt = require('bcrypt');
+const bcryptjs = require('bcryptjs');
 const { User } = require('../models');
 
-// Middleware to authenticate the request using basic-auth.
-exports.authenticateUser = async (req, res, next) => {
-     
-    let message; // store the message to display
-    const credentials = auth(req); // Parse the user's credentials from the Authorization header.
+// Middleware to authenticate the request using Basic Authentication.
+async function authenticateUser(req, res, next) {
 
-    // If the user's credentials are available...
+    let message; // store the message to display.
+
+    // Parse the user's credentials from the Authorization header.
+    const credentials = auth(req);
+
+    // If the user's credentials are available
         // Attempt to retrieve the user from the data store
+        // by their emailAddress 
     if(credentials) {
-        const user = await User.findOne( {where: {emailAddress: credentials.emailAddress} } );
+        const user = await User.findOne({
+            where: { emailAddress: credentials.name },
+        })
 
-        // If a user was successfully retrieved from the data store...
-            // Use the bcrypt npm package to compare the user's password
-            // (from the Authorization header) to the user's password
-            // that was retrieved from the data store.
+        // If a user was found for the provided email address, then check that user's stored hashed     password against the clear text password given using bcryptjs.
         if(user) {
-            const authenticated = bcrypt
-            .compareSync(credentials.pass, user.confirmedPassword); //*check confirmed password**** */
+            const authenticated = bcryptjs.compareSync(credentials.pass, user.password);
 
-            // If the passwords match..._
-                // Store the retrieved user object on the request object
-                //  so any middleware functions that follow this middleware function
-                //  will have access to the user's information.
+            // If the password comparison succeeds, set the user on the request so that each following middleware function has access to it.
             if(authenticated) {
-                console.log(`Authentication successful for: ${user.firstName} ${user.lastName}`);
-                req.currentUser = user; // adding property `currentUser` to the authenticate user.
+                req.currentUser = user; // means that you're adding a property named currentUser to the request object and setting it to the authenticated user
             } else {
-                message = `Authentication denied for: ${user.firstName} ${user.lastName}`;
+                message = `Authentication failure for User: ${user.username}`;
             }
+
         } else {
-            message = `User not found for: ${credentials.emailAddress}`;
+            message = `User not found for username: ${credentuals.name}`;
         }
+
     } else {
-        message = 'Auth header not found';
+        message = `Auth header not found`;
     }
 
     // If user authentication failed...
@@ -45,11 +44,12 @@ exports.authenticateUser = async (req, res, next) => {
     if (message) {
         console.warn(message);
         res.status(401).json({ message: 'Access Denied' });
-    
-    // Or if user authentication succeeded...
-    // Call the next() method.
+    // Otherwise proceeds.    
     } else {
         next();
     }
 
+
 };
+
+module.exports = { authenticateUser };
