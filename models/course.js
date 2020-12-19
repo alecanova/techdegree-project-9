@@ -28,8 +28,14 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
     },
-    estimatedTime: DataTypes.STRING,
-    materialsNeeded: DataTypes.STRING
+    estimatedTime: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    materialsNeeded: {
+      type: DataTypes.STRING,
+      allowNull: true
+    }
   }, {
     sequelize,
     modelName: 'Course',
@@ -37,7 +43,6 @@ module.exports = (sequelize, DataTypes) => {
 
   Course.associate = (models) => {
     Course.belongsTo(models.User, {
-      as: 'owner', //alias
       foreignKey: {
         fieldName: 'userId',
       },
