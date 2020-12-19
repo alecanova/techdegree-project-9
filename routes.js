@@ -16,13 +16,13 @@ router.get('/users', authenticateUser, (req, res) => {
         const { password, ...user } = req.currentUser
         res.status(200).json(user);
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
 
 });
 
 // POST /api/users 201 - Creates a user, sets the Location header to "/", and returns no content.
-router.post('/users', async(req, res) => {
+router.post('/users', async(req, res, next) => {
 
     let user = req.body;
 
@@ -46,16 +46,16 @@ router.post('/users', async(req, res) => {
 router.get('/courses', async(req, res) => {
 
     try {
-        let courses = await Course.findAll({
+        const courses = await Course.findAll({
             attributes: {exclude: ['createdAt', 'updatedAt']},
-            include: [{
+            include: {
                 model: User,
-                as: 'owner',
-            }]
-        })
+                attributes:  ['id', 'firstName', 'lastName', 'emailAddress']
+            }
+        });
         res.json(courses);
     } catch(error) {
-        return res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
 
 });
@@ -67,30 +67,31 @@ router.get('/courses/:id', async(req, res) => {
         const { id } = req.params;
         const course = await Course.findOne({
             where: { id: id },
+            attributes: {exclude: ['createdAt', 'updatedAt']},
             include: [{
                 model: User,
-                as: 'owner'
+                attributes: {exclude: ['emailAddress', 'password', 'createdAt', 'updatedAt']},
             }]
         });
         if(course) {
             res.status(200).json(course);
         } else {
-            res.status(400).json({"message": "This course does not exist."});
+            res.status(404).json({"message": "This course does not exist."});
         }
         
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
     
 });
 
 // POST /api/courses 201 - Creates a course, sets the Location header to the URI for the course, and returns no content.
-router.post('/courses', authenticateUser, async (req, res) => {
+router.post('/courses', authenticateUser, async (req, res, next) => {
 
     try {
         const course = await Course.create(req.body);
         res.location('/api/courses/' + course.id)
-        res.status(201).json({ "message": "Course succesfully created!"});
+        res.status(201).json({ "message": "Course successfully created!"}).end();
     } catch(error) { 
         if (error.name === 'SequelizeValidationError') {
             const errors = error.errors.map(err => err.message);
@@ -103,29 +104,47 @@ router.post('/courses', authenticateUser, async (req, res) => {
 });          
 
 // PUT /api/courses/:id 204 - Updates a course and returns no content.
-router.put('/courses/:id', authenticateUser, async(req, res) => {
+router.put('/courses/:id', authenticateUser, async (req, res, next) => {
 
-    try {
-        const { id } = req.params;
-        const [ updated ] = await Course.update(req.body, {
-            where: { id: id },
+        const user = req.currentUser;
+        let course = await Course.findByPk(req.params.id, {
+            include: User,
         });
-        if (updated) {
-            const updatedCourse = await Course.findOne({ where: { id: id } });
-            return res.status(200).json({ course: updatedCourse });
-        } else {
-            throw new Error('Course not found');
-        }
-    } catch(error) {
-        if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
-            const errors = error.errors.map(err => err.message);
-            res.status(400).json({ errors });   
-        } else {
-            next(error);
-        }      
-    }
 
-});
+        if (course) {
+
+            // check if the currentUser owns the requested course.
+            if (course.userId === user.id) {
+
+                try {
+                    const [updated] = await Course.update(req.body, {
+                        where: { id: req.params.id }
+                    });
+                    if (updated) {
+                        res.status(204).end();
+                    } else {
+                        res.sendStatus(400);
+                    }
+
+                } catch (error) {
+                    if (error.name === 'SequelizeValidationError') {
+                        const errors = error.errors.map(err => err.message);
+                        res.status(400).json({ errors });
+                    } else {
+                        next(error);
+                    }
+                }
+
+            } else {
+                // access not allowed.
+                res.status(403);
+            }
+
+        } else {
+            res.sendStatus(404);
+        }
+
+    });
 
 // DELETE /api/courses/:id 204 - Deletes a course and returns no content.
 router.delete('/courses/:id', authenticateUser, async(req, res) => {
