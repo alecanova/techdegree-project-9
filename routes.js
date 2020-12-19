@@ -149,23 +149,33 @@ router.put('/courses/:id', authenticateUser, async (req, res, next) => {
 // DELETE /api/courses/:id 204 - Deletes a course and returns no content.
 router.delete('/courses/:id', authenticateUser, async(req, res) => {
 
-    try {
-        const { id } = req.params;
-        const deleted = await Course.destroy(req.body, {
-            where: { id: id },
-        });
-        if(deleted) {
-            res.status(204).json({ "message": "Course succesfully deleted." });
+    const user = req.currentUser;
+    let course = await Course.findByPk(req.params.id, {
+        inclde: User,
+    });
+
+    if(course) {
+
+        // check if the currentUser owns the requested course.
+        if(course.userId === user.id) {
+
+            try {
+                await course.destroy();
+                res.status(204).end();
+            } catch(error) {
+                res.status(500).json({ error: error.message });
+            }
+
+        } else {
+            // access not allowed.
+            res.sendstatus(403);
         }
-        throw new Error("Course not found.");
-    } catch(error) {
-        res.status(500).json({ error: error.message });
+
+    } else {
+        res.sendStatus(404);
     }
 
 });
-
-
-
 
 
 module.exports = router;
