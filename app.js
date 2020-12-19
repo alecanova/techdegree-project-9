@@ -66,13 +66,3 @@ const server = app.listen(app.get('port'), () => {
   }
 })();
 
-//test
-// app.get('/users', async (req, res) => {
-//   const users = await User.findAll();
-//   res.json(users);
-// });
-
-// app.get('/courses', async (req, res) => {
-//   const courses = await Course.findAll();
-//   res.json(courses);
-// });
