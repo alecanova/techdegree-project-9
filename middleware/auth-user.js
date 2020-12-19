@@ -17,8 +17,10 @@ async function authenticateUser(req, res, next) {
         // by their emailAddress 
     if(credentials) {
         const user = await User.findOne({
+            attributes: ['id', 'firstName', 'lastName', 'password'],
             where: { emailAddress: credentials.name },
-        })
+            raw: true
+        });
 
         // If a user was found for the provided email address, then check that user's stored hashed     password against the clear text password given using bcryptjs.
         if(user) {
