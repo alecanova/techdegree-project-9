@@ -151,7 +151,7 @@ router.delete('/courses/:id', authenticateUser, async(req, res) => {
 
     const user = req.currentUser;
     let course = await Course.findByPk(req.params.id, {
-        inclde: User,
+        include: User,
     });
 
     if(course) {
