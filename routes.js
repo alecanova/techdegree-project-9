@@ -30,7 +30,7 @@ router.post('/users', async(req, res, next) => {
         if (user.password) user.password = bcryptjs.hashSync(user.password);
         user = await User.create(req.body);
         res.location('/');
-        res.status(201).json({ "message": "User successfully created!"});
+        res.status(201).end();
     } catch(error) {
         if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
             const errors = error.errors.map(err => err.message);
@@ -91,7 +91,7 @@ router.post('/courses', authenticateUser, async (req, res, next) => {
     try {
         const course = await Course.create(req.body);
         res.location('/api/courses/' + course.id)
-        res.status(201).json({ "message": "Course successfully created!"}).end();
+        res.status(201).end();
     } catch(error) { 
         if (error.name === 'SequelizeValidationError') {
             const errors = error.errors.map(err => err.message);
@@ -137,7 +137,7 @@ router.put('/courses/:id', authenticateUser, async (req, res, next) => {
 
             } else {
                 // access not allowed.
-                res.status(403);
+                res.sendStatus(403);
             }
 
         } else {
@@ -168,7 +168,7 @@ router.delete('/courses/:id', authenticateUser, async(req, res) => {
 
         } else {
             // access not allowed.
-            res.sendstatus(403);
+            res.sendStatus(403);
         }
 
     } else {
